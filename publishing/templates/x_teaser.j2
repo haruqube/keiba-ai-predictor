@@ -1,0 +1,12 @@
+🏇 {{ date_display }} AI競馬予想
+
+{{ venue_display }} 注目レース：
+{% for race in top_races %}
+{{ race.race_name }}
+◎ {{ race.honmei }}
+{% endfor %}
+
+詳細分析はnote記事で👇
+{{ note_url }}
+
+#競馬予想 #AI予想 #{{ venue_tag }}

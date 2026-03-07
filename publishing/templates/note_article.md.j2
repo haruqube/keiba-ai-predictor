@@ -1,0 +1,41 @@
+# 🏇 【AI競馬予想】{{ date_display }} {{ venue_display }}
+
+> AI予測モデル（LightGBM LambdaRank）+ Claude分析による競馬予想レポート
+
+---
+
+## 📊 本日の予想サマリー
+
+| 項目 | 内容 |
+|------|------|
+| 対象日 | {{ date_display }} |
+| 開催場 | {{ venue_display }} |
+| 対象レース数 | {{ race_count }}R |
+| 先週的中率 | {{ last_week_accuracy }} |
+
+---
+
+{% for race in races %}
+## 🏁 {{ race.race_number }}R {{ race.race_name }}
+
+**{{ race.distance }}m {{ race.surface }} / {{ race.grade or '一般' }} / {{ race.horse_count }}頭**
+
+{{ race.analysis }}
+
+---
+
+{% endfor %}
+
+## 📈 AI予測モデルについて
+
+本予想はLightGBM LambdaRankモデルを使用しています。
+- 学習データ: 過去3年分のJRA全レース
+- 特徴量: 馬成績、騎手成績、レース条件など30+項目
+- 評価指標: NDCG@3
+
+**免責事項:** 本記事はAIによる分析結果であり、投資判断は自己責任でお願いします。
+
+---
+
+*次回更新: 来週金曜日*
+*質問・フィードバックはコメントで！*
