@@ -893,6 +893,7 @@ body {
   <div id="recommendSection" class="recommend-section"></div>
   <div id="yesterdaySection"></div>
   <div class="date-nav">
+    <button class="date-btn secondary" id="yesterdayBtn">昨日</button>
     <button class="date-btn primary" id="todayBtn">今日</button>
     <button class="date-btn secondary" id="tomorrowBtn">明日</button>
   </div>
@@ -946,9 +947,16 @@ body {
     var d = new Date();
     return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
   }
+  function yesterdayStr() {
+    var d = new Date(); d.setDate(d.getDate()-1);
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
   function tomorrowStr() {
     var d = new Date(); d.setDate(d.getDate()+1);
     return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function threeDayRange() {
+    return [yesterdayStr(), todayStr(), tomorrowStr()];
   }
   function formatDate(s) {
     var d = new Date(s + "T00:00:00");
@@ -1065,16 +1073,17 @@ body {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
-  /* == Recommended races == */
+  /* == Recommended races (yesterday ~ tomorrow) == */
   async function loadRecommendations() {
     var el = $("#recommendSection");
-    var today = todayStr();
+    var days = threeDayRange();
     try {
-      // Fetch predictions with entries and race info for today
+      // Fetch predictions with entries and race info for 3 days
       var { data: races, error: e1 } = await sb
         .from("races")
         .select("race_id, date, venue, race_number, race_name, grade, distance, surface, horse_count")
-        .eq("date", today)
+        .in("date", days)
+        .order("date")
         .order("race_id");
       if (e1) throw e1;
       if (!races || races.length === 0) { el.innerHTML = ""; return; }
@@ -1146,6 +1155,7 @@ body {
 
           recs.push({
             id: raceId,
+            date: race.date,
             venue: race.venue,
             rn: race.race_number,
             g: race.grade,
@@ -1163,7 +1173,7 @@ body {
 
       var h = '<div class="section-header">';
       h += '<div class="section-icon">&#9733;</div>';
-      h += '<span class="section-title">今日のおすすめ</span>';
+      h += '<span class="section-title">HIGH信頼度レース</span>';
       h += '<span class="section-badge">' + recs.length + '件</span>';
       h += '</div>';
 
@@ -1172,7 +1182,8 @@ body {
         var confCls = rec.conf >= 3.5 ? "conf-very-high" : "conf-high";
         h += '<div class="rec-card" data-raceid="' + rec.id + '">';
         h += '<div class="rec-top">';
-        h += '<span class="rec-venue">' + escapeHtml(rec.venue) + ' ' + rec.rn + 'R ' + gradeBadge(rec.g) + '</span>';
+        var dateLabel = rec.date === todayStr() ? "" : '<span style="font-size:11px;color:var(--sub);margin-right:4px">' + formatDate(rec.date) + '</span>';
+        h += '<span class="rec-venue">' + dateLabel + escapeHtml(rec.venue) + ' ' + rec.rn + 'R ' + gradeBadge(rec.g) + '</span>';
         h += '<span class="rec-conf ' + confCls + '">' + rec.conf.toFixed(2) + '</span>';
         h += '</div>';
         h += '<div class="rec-meta-row">' + surfaceTag(rec.surface, rec.distance) + '</div>';
@@ -1602,39 +1613,9 @@ body {
   async function loadYesterdayResults() {
     var el = $("#yesterdaySection");
     try {
-      var today = todayStr();
-      // Find the most recent date with results before today
-      var { data: recentRaces, error: e1 } = await sb
-        .from("race_results")
-        .select("race_id")
-        .limit(1);
-      if (e1 || !recentRaces || recentRaces.length === 0) { el.innerHTML = ""; return; }
+      var targetDate = yesterdayStr();
 
-      // Get races with results, find dates
-      var { data: racesDates, error: e2 } = await sb
-        .from("races")
-        .select("race_id, date")
-        .lt("date", today)
-        .order("date", { ascending: false })
-        .limit(200);
-      if (e2 || !racesDates || racesDates.length === 0) { el.innerHTML = ""; return; }
-
-      // Find latest date that has results
-      var dateSet = [...new Set(racesDates.map(function(r) { return r.date; }))];
-      var targetDate = null;
-      for (var di = 0; di < dateSet.length && di < 5; di++) {
-        var dRaces = racesDates.filter(function(r) { return r.date === dateSet[di]; });
-        var dRaceIds = dRaces.map(function(r) { return r.race_id; });
-        var { data: resCheck } = await sb
-          .from("race_results")
-          .select("race_id")
-          .in("race_id", dRaceIds)
-          .limit(1);
-        if (resCheck && resCheck.length > 0) { targetDate = dateSet[di]; break; }
-      }
-      if (!targetDate) { el.innerHTML = ""; return; }
-
-      // Fetch all data for that date
+      // Fetch all data for yesterday
       var { data: tRaces } = await sb.from("races").select("race_id, venue, race_number, grade, distance, surface").eq("date", targetDate).order("race_id");
       if (!tRaces || tRaces.length === 0) { el.innerHTML = ""; return; }
       var tRaceIds = tRaces.map(function(r) { return r.race_id; });
@@ -1789,6 +1770,7 @@ body {
   }
 
   /* == Event handlers == */
+  $("#yesterdayBtn").addEventListener("click", function() { loadVenueList(yesterdayStr()); });
   $("#todayBtn").addEventListener("click", function() { loadVenueList(todayStr()); });
   $("#tomorrowBtn").addEventListener("click", function() { loadVenueList(tomorrowStr()); });
   $("#dateGoBtn").addEventListener("click", function() { var v = $("#dateInput").value; if (v) loadVenueList(v); });
