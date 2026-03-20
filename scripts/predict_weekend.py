@@ -91,9 +91,17 @@ def predict_weekend():
                 df["mark"] = [marks[i] if i < len(marks) else "" for i in range(len(df))]
 
                 # 信頼度スコア: 1位と3位のスコア差（conf_gap13）
-                if len(df) >= 3:
+                # 新馬・未勝利戦は予測不能なので信頼度0
+                race_grade = entry_data.get("grade", "")
+                is_unpredictable = race_grade in ("新馬", "未勝利", "")
+
+                if len(df) >= 3 and not is_unpredictable:
                     scores_sorted = df["predicted_score"].values  # already sorted desc
-                    confidence = float(scores_sorted[0] - scores_sorted[2])
+                    # 上位3頭が同スコア（NaN埋めで全同値）なら信頼度0
+                    if scores_sorted[0] == scores_sorted[2]:
+                        confidence = 0.0
+                    else:
+                        confidence = float(scores_sorted[0] - scores_sorted[2])
                 else:
                     confidence = 0.0
 
@@ -113,9 +121,9 @@ def predict_weekend():
                 # 表示
                 race_name = entry_data.get("race_name", race_id)
                 # 信頼度ティア
-                if confidence >= 2.0:
+                if confidence >= 0.04:
                     conf_label = "[bold green]HIGH[/bold green]"
-                elif confidence >= 0.8:
+                elif confidence >= 0.015:
                     conf_label = "[yellow]MID[/yellow]"
                 else:
                     conf_label = "[dim]LOW[/dim]"

@@ -118,7 +118,7 @@ def run_friday_pipeline(dates: list[str]):
                     FROM predictions
                     WHERE race_id IN (
                         SELECT race_id FROM races WHERE date = ?
-                    ) AND confidence >= 2.0 AND predicted_rank = 1
+                    ) AND confidence >= 0.04 AND predicted_rank = 1
                 """, (formatted,)).fetchone()
                 high_conf_count += row["cnt"] if row else 0
             conn.close()
@@ -266,9 +266,9 @@ def analyze_confidence_accuracy(conn, dates: list[str]):
             continue
 
         confidence = preds[0]["confidence"]
-        if confidence >= 2.0:
+        if confidence >= 0.04:
             tier = "HIGH"
-        elif confidence >= 0.8:
+        elif confidence >= 0.015:
             tier = "MID"
         else:
             tier = "LOW"
