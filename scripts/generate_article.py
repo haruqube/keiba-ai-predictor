@@ -78,9 +78,9 @@ def generate_prediction_report(target_date: str | None = None) -> str:
 
         # 信頼度ティア表示
         confidence = predictions[0]["confidence"] if predictions[0]["confidence"] else 0.0
-        if confidence >= 0.04:
+        if confidence >= 0.5:
             conf_tier = "HIGH"
-        elif confidence >= 0.015:
+        elif confidence >= 0.2:
             conf_tier = "MID"
         else:
             conf_tier = "LOW"

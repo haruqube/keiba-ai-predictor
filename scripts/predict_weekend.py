@@ -121,9 +121,9 @@ def predict_weekend():
                 # 表示
                 race_name = entry_data.get("race_name", race_id)
                 # 信頼度ティア
-                if confidence >= 0.04:
+                if confidence >= 0.5:
                     conf_label = "[bold green]HIGH[/bold green]"
-                elif confidence >= 0.015:
+                elif confidence >= 0.2:
                     conf_label = "[yellow]MID[/yellow]"
                 else:
                     conf_label = "[dim]LOW[/dim]"
