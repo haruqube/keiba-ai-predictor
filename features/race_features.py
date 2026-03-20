@@ -16,8 +16,6 @@ class RaceFeatureBuilder(BaseFeatureBuilder):
             "horse_count",
             "horse_number", "bracket_number",
             "weight_carried",
-            "odds", "popularity",
-            "odds_rank",
             "is_good_track",
             "month",
         ]
@@ -67,22 +65,5 @@ class RaceFeatureBuilder(BaseFeatureBuilder):
             feats["horse_number"] = entry["horse_number"]
             feats["bracket_number"] = entry["bracket_number"]
             feats["weight_carried"] = entry["weight_carried"]
-            feats["odds"] = entry["odds"]
-            feats["popularity"] = entry["popularity"]
-
-        # オッズ順位
-        if feats["odds"] and race:
-            all_entries = conn.execute("""
-                SELECT odds FROM entries WHERE race_id = ? AND odds IS NOT NULL
-                UNION
-                SELECT odds FROM race_results WHERE race_id = ? AND odds IS NOT NULL
-            """, (race_id, race_id)).fetchall()
-
-            if all_entries:
-                odds_list = sorted(set(r["odds"] for r in all_entries))
-                try:
-                    feats["odds_rank"] = odds_list.index(feats["odds"]) + 1
-                except ValueError:
-                    feats["odds_rank"] = len(odds_list) // 2
 
         return feats

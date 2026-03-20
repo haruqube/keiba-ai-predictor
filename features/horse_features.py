@@ -20,6 +20,10 @@ class HorseFeatureBuilder(BaseFeatureBuilder):
             "days_since_last_race",
             "distance_win_rate", "surface_win_rate",
             "avg_horse_weight", "weight_trend",
+            # 前走成績（予測時に使える合法な特徴量）
+            "prev_finish", "prev_odds", "prev_popularity",
+            "prev_last_3f", "prev_horse_weight",
+            "prev2_finish", "prev2_odds",
         ]
 
     def build(self, race_id: str, horse_id: str, race_date: str) -> dict:
@@ -107,5 +111,19 @@ class HorseFeatureBuilder(BaseFeatureBuilder):
         if len(weights) >= 2:
             feats["avg_horse_weight"] = sum(weights[:3]) / min(3, len(weights))
             feats["weight_trend"] = weights[0] - weights[1]
+
+        # 前走成績（予測時にも使える合法な特徴量）
+        if len(rows) >= 1:
+            r0 = rows[0]
+            feats["prev_finish"] = r0["finish_position"]
+            feats["prev_odds"] = r0["odds"]
+            feats["prev_popularity"] = r0["popularity"]
+            feats["prev_last_3f"] = r0["last_3f"]
+            feats["prev_horse_weight"] = r0["horse_weight"]
+
+        if len(rows) >= 2:
+            r1 = rows[1]
+            feats["prev2_finish"] = r1["finish_position"]
+            feats["prev2_odds"] = r1["odds"]
 
         return feats
