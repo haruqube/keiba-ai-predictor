@@ -76,6 +76,17 @@ def generate_prediction_report(target_date: str | None = None) -> str:
             lines.append("")
             continue
 
+        # 信頼度ティア表示
+        confidence = predictions[0]["confidence"] if predictions[0]["confidence"] else 0.0
+        if confidence >= 2.0:
+            conf_tier = "HIGH"
+        elif confidence >= 0.8:
+            conf_tier = "MID"
+        else:
+            conf_tier = "LOW"
+        lines.append(f"**信頼度: {conf_tier} ({confidence:.2f})**")
+        lines.append("")
+
         marks = ["◎", "○", "▲", "△", "△"]
 
         lines.append("| 印 | 馬番 | 馬名 | 騎手 | 斤量 | オッズ | 人気 | スコア | 直近成績 |")

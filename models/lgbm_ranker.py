@@ -76,11 +76,11 @@ class LGBMRanker(BasePredictor):
         scores = self.model.predict(X[self.feature_names])
         return pd.Series(scores, index=X.index)
 
-    def feature_importance(self) -> pd.DataFrame:
+    def feature_importance(self, importance_type: str = "gain") -> pd.DataFrame:
         """特徴量重要度を取得"""
         if self.model is None:
             raise RuntimeError("モデルが学習されていません")
-        importance = self.model.feature_importance(importance_type="gain")
+        importance = self.model.feature_importance(importance_type=importance_type)
         return pd.DataFrame({
             "feature": self.feature_names,
             "importance": importance,

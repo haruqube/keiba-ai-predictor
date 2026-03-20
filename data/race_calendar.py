@@ -13,11 +13,28 @@ import time
 def get_this_weekend_dates() -> list[str]:
     """今週の土日の日付をYYYYMMDD形式で返す"""
     today = datetime.now()
-    # 土曜日までの日数
-    days_until_sat = (5 - today.weekday()) % 7
-    if days_until_sat == 0 and today.hour >= 18:
-        days_until_sat = 7
-    saturday = today + timedelta(days=days_until_sat)
+    weekday = today.weekday()  # 0=Mon, 5=Sat, 6=Sun
+
+    if weekday == 5:  # 土曜日
+        if today.hour >= 18:
+            # 土曜18時以降 → 来週末
+            saturday = today + timedelta(days=7)
+        else:
+            saturday = today
+    elif weekday == 6:  # 日曜日
+        if today.hour >= 18:
+            # 日曜18時以降 → 来週末
+            saturday = today + timedelta(days=6)
+        else:
+            # 日曜日中 → 今週末（昨日の土曜 + 今日）
+            saturday = today - timedelta(days=1)
+    else:
+        # 月〜金 → 次の土曜
+        days_until_sat = (5 - weekday) % 7
+        if days_until_sat == 0:
+            days_until_sat = 7
+        saturday = today + timedelta(days=days_until_sat)
+
     sunday = saturday + timedelta(days=1)
     return [saturday.strftime("%Y%m%d"), sunday.strftime("%Y%m%d")]
 

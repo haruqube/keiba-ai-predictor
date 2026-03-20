@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<title>競馬AI予想</title>
+<style>
+:root {
+  --bg: #f0f2f5;
+  --card: #ffffff;
+  --text: #1e293b;
+  --sub: #64748b;
+  --muted: #94a3b8;
+  --border: #e2e8f0;
+  --accent: #16a34a;
+  --accent-dark: #15803d;
+  --accent-light: #dcfce7;
+  --surface: #f8fafc;
+  --honmei: #dc2626;
+  --taikou: #2563eb;
+  --tanana: #059669;
+  --renka: #6b7280;
+  --grade-g1: #dc2626;
+  --grade-g2: #ea580c;
+  --grade-g3: #059669;
+  --grade-op: #7c3aed;
+  --grade-l: #db2777;
+  --grade-3win: #2563eb;
+  --grade-2win: #0891b2;
+  --grade-1win: #64748b;
+  --grade-newbie: #a855f7;
+  --grade-maiden: #6b7280;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", "Segoe UI", Meiryo, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* -- Header -- */
+.header {
+  background: linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%);
+  color: #fff;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header h1 { font-size: 17px; font-weight: 800; flex: 1; letter-spacing: 0.5px; }
+.header-sub { font-size: 10px; font-weight: 400; opacity: 0.7; margin-left: 6px; }
+.back-btn {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.back-btn:active { background: rgba(255,255,255,0.25); }
+.hidden { display: none !important; }
+
+/* -- Screen transitions -- */
+.screen { animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* -- Date selection screen -- */
+.date-screen { padding: 16px; }
+
+/* Recommend section */
+.recommend-section { margin-bottom: 20px; }
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.section-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: #fff;
+}
+.section-title { font-size: 15px; font-weight: 700; }
+.section-badge {
+  font-size: 10px; font-weight: 700;
+  background: #fef2f2; color: #dc2626;
+  padding: 2px 8px; border-radius: 10px;
+  margin-left: auto;
+}
+
+.rec-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.rec-card:active { transform: scale(0.98); box-shadow: var(--shadow-sm); }
+.rec-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #dc2626, #f97316);
+}
+
+.rec-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.rec-venue {
+  font-size: 14px;
+  font-weight: 700;
+  flex: 1;
+}
+.rec-conf {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.conf-high { background: #fef2f2; color: #dc2626; }
+.conf-very-high { background: #dc2626; color: #fff; }
+
+.rec-horses {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.rec-horse-group {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  background: var(--surface);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+.rec-horse-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sub);
+  margin-right: 4px;
+}
+
+/* Horse number circle - bracket colors (1-8) */
+.horse-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 11px;
+}
+/* Bracket colors: waku 1=white, 2=black, 3=red, 4=blue, 5=yellow, 6=green, 7=orange, 8=pink */
+.waku-1 { background: #fff; color: #333; border: 2px solid #d1d5db; }
+.waku-2 { background: #1e293b; color: #fff; }
+.waku-3 { background: #dc2626; color: #fff; }
+.waku-4 { background: #2563eb; color: #fff; }
+.waku-5 { background: #eab308; color: #1e293b; }
+.waku-6 { background: #16a34a; color: #fff; }
+.waku-7 { background: #ea580c; color: #fff; }
+.waku-8 { background: #db2777; color: #fff; }
+
+.rec-plus {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+
+.rec-names {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.rec-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--sub);
+}
+.rec-surface-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+.surface-turf { background: #dcfce7; color: #16a34a; }
+.surface-dirt { background: #fef3c7; color: #b45309; }
+.surface-obs { background: #e0e7ff; color: #4338ca; }
+
+.rec-arrow {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 18px;
+}
+
+/* Date buttons */
+.date-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.date-btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 44px;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.date-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(22,163,74,0.3);
+}
+.date-btn.primary:active { background: var(--accent-dark); transform: scale(0.97); }
+.date-btn.secondary {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.date-btn.secondary:active { background: var(--surface); transform: scale(0.97); }
+
+.date-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.date-picker label { font-size: 13px; color: var(--sub); white-space: nowrap; font-weight: 600; }
+.date-input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  background: var(--card);
+  color: var(--text);
+}
+.date-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+.date-go-btn {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+  font-family: inherit;
+}
+
+/* Recent dates */
+.recent-section {
+  margin-top: 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.recent-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.recent-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  min-height: 44px;
+  transition: background 0.1s;
+  gap: 8px;
+}
+.recent-btn:active { background: var(--accent-light); }
+.recent-btn .date-main { font-weight: 600; flex: 1; text-align: left; }
+.recent-btn .date-iso { font-size: 11px; color: var(--muted); }
+.recent-btn .arrow { color: var(--muted); }
+
+/* -- Venue selection screen -- */
+.venue-screen { padding: 12px 16px 24px; }
+.venue-screen-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 12px;
+  letter-spacing: 0.3px;
+}
+.venue-card {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  cursor: pointer;
+  gap: 12px;
+  box-shadow: var(--shadow);
+  transition: transform 0.1s;
+  position: relative;
+  overflow: hidden;
+}
+.venue-card:active { transform: scale(0.98); }
+.venue-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+}
+.venue-card.has-rec::before { background: linear-gradient(180deg, #dc2626, #f97316); }
+.venue-name {
+  font-size: 18px;
+  font-weight: 800;
+  min-width: 70px;
+}
+.venue-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.venue-race-count {
+  font-size: 13px;
+  color: var(--sub);
+  font-weight: 600;
+}
+.venue-conf-summary {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.venue-conf-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.venue-conf-high { background: #fef2f2; color: #dc2626; }
+.venue-conf-mid { background: #fff7ed; color: #ea580c; }
+.venue-conf-low { background: #f1f5f9; color: #64748b; }
+.venue-time-range {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.venue-chevron { color: var(--muted); font-size: 18px; }
+
+/* -- Race list -- */
+.racelist-screen { padding: 12px 16px 24px; }
+.racelist-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.racelist-venue-name {
+  font-size: 18px;
+  font-weight: 800;
+}
+.racelist-date-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.race-card {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  cursor: pointer;
+  gap: 10px;
+  min-height: 48px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.1s;
+}
+.race-card:active { transform: scale(0.98); }
+.race-num {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+  min-width: 30px;
+}
+.race-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.race-surface-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.race-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.no-pred { font-size: 10px; color: var(--muted); font-weight: 500; }
+.race-chevron { color: var(--muted); font-size: 14px; }
+.race-conf {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.race-conf-high { background: #fef2f2; color: #dc2626; }
+.race-conf-mid { background: #fff7ed; color: #ea580c; }
+.race-conf-low { background: #f1f5f9; color: #64748b; }
+
+/* Grade badges */
+.grade {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.grade-G1 { background: var(--grade-g1); }
+.grade-G2 { background: var(--grade-g2); }
+.grade-G3 { background: var(--grade-g3); }
+.grade-OP, .grade-open { background: var(--grade-op); }
+.grade-L { background: var(--grade-l); }
+.grade-3win { background: var(--grade-3win); }
+.grade-2win { background: var(--grade-2win); }
+.grade-1win { background: var(--grade-1win); }
+.grade-newbie { background: var(--grade-newbie); }
+.grade-maiden { background: var(--grade-maiden); }
+
+/* -- Race detail -- */
+.detail-screen { padding: 12px 16px 32px; }
+.detail-header {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+.detail-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.detail-meta {
+  font-size: 12px;
+  color: var(--sub);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.detail-meta-item { display: flex; align-items: center; gap: 3px; }
+.detail-surface-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.detail-condition {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--sub);
+}
+
+/* Prediction table */
+.pred-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 12px;
+}
+.pred-table {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+.pred-table thead { background: #f1f5f9; }
+.pred-table th {
+  padding: 10px 4px;
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--sub);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.pred-table td {
+  padding: 10px 4px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+.pred-table tbody tr:first-child td { border-top: none; }
+.pred-table tbody tr.top3-row { background: #fefce8; }
+.pred-table tbody tr:active { background: var(--accent-light); }
+
+.frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 11px;
+}
+.frame-1 { background: #fff; color: #333; border: 2px solid #d1d5db; }
+.frame-2 { background: #1e293b; color: #fff; }
+.frame-3 { background: #dc2626; color: #fff; }
+.frame-4 { background: #2563eb; color: #fff; }
+.frame-5 { background: #eab308; color: #1e293b; }
+.frame-6 { background: #16a34a; color: #fff; }
+.frame-7 { background: #ea580c; color: #fff; }
+.frame-8 { background: #db2777; color: #fff; }
+
+.mark { font-weight: 800; font-size: 16px; }
+.mark-honmei { color: var(--honmei); }
+.mark-taikou { color: var(--taikou); }
+.mark-tanana { color: var(--tanana); }
+.mark-renka  { color: var(--renka); }
+
+.horse-name-cell {
+  text-align: left !important;
+  padding-left: 6px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+  font-weight: 600;
+}
+.jockey-cell {
+  text-align: left !important;
+  padding-left: 4px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+  font-size: 11px;
+  color: var(--sub);
+}
+.odds-cell { font-size: 11px; color: var(--sub); font-weight: 600; }
+.score-cell { font-size: 12px; color: var(--sub); }
+.result-cell { font-weight: 800; font-size: 15px; }
+.result-1 { color: var(--honmei); }
+.result-2 { color: var(--taikou); }
+.result-3 { color: var(--tanana); }
+
+/* Bet section */
+.bet-section {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 12px;
+  box-shadow: var(--shadow);
+}
+.bet-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bet-title { font-size: 14px; font-weight: 800; }
+.bet-conf-label {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.conf-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.conf-fill { height: 100%; border-radius: 2px; }
+.conf-fill-high { background: var(--honmei); }
+.conf-fill-mid { background: var(--grade-g2); }
+.conf-fill-low { background: var(--renka); }
+
+.bet-group-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 12px 0 6px;
+}
+.bet-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  gap: 8px;
+}
+.bet-combo { font-weight: 800; flex: 1; font-size: 14px; letter-spacing: 0.5px; }
+.bet-names { font-size: 11px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.bet-tag {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.tag-honmei { background: var(--honmei); }
+.tag-chuuana { background: var(--grade-g2); }
+.tag-ouana { background: var(--grade-op); }
+
+/* Loading / Error */
+.loading, .empty-msg, .error-msg {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.error-msg { color: var(--honmei); }
+.spinner {
+  display: inline-block;
+  width: 28px; height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-bottom: 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+
+/* Race status badges */
+.race-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.status-live { background: #dc2626; color: #fff; animation: pulse 1.5s infinite; }
+.status-finished { background: #e2e8f0; color: #64748b; }
+.status-upcoming { background: #dbeafe; color: #2563eb; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+/* Finished races dimmed */
+.race-card.is-finished { opacity: 0.5; }
+.race-card.is-finished:active { opacity: 0.7; }
+.race-card.is-live { border-left: 3px solid #dc2626; }
+
+/* Venue card status */
+.venue-status-row { display: flex; gap: 6px; align-items: center; margin-top: 2px; }
+.venue-status-tag {
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 8px;
+}
+.venue-live-tag { background: #fef2f2; color: #dc2626; }
+.venue-done-tag { background: #f1f5f9; color: #94a3b8; }
+
+/* -- Yesterday results section -- */
+.yday-section { margin-bottom: 16px; }
+.yday-summary {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.yday-stat {
+  flex: 1;
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.yday-stat-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+.yday-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.yday-stat-sub {
+  font-size: 10px;
+  color: var(--sub);
+  font-weight: 500;
+}
+.yday-card {
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.1s;
+  border-left: 3px solid transparent;
+}
+.yday-card:active { transform: scale(0.98); }
+.yday-card.yday-high-hit { border-left-color: #059669; }
+.yday-card.yday-high-miss { border-left-color: #dc2626; }
+.yday-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.yday-venue {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.yday-hit {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #dcfce7;
+  color: #059669;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.yday-miss {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.yday-comparison {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.yday-horse {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--surface);
+}
+.yday-horse.yday-in-top3 { background: #f0fdf4; }
+.yday-arrow { color: var(--muted); font-size: 10px; margin: 0 1px; }
+.yday-finish { font-weight: 700; font-size: 12px; }
+.yday-in-top3 .yday-finish { color: #059669; }
+.yday-out-top3 .yday-finish { color: #94a3b8; }
+.yday-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 4px;
+  gap: 3px;
+}
+.yday-top3-label {
+  font-size: 10px;
+  color: var(--sub);
+  font-weight: 600;
+}
+.yday-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.yday-dot-hit { background: #059669; }
+.yday-dot-miss { background: #e2e8f0; }
+
+/* Scroll to top button */
+.scroll-top {
+  position: fixed;
+  bottom: 24px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 44px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 99;
+}
+.scroll-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.scroll-top:active { transform: scale(0.9); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn hidden" id="backBtn" aria-label="戻る">&#8592;</button>
+  <h1 id="headerTitle">競馬AI予想<span class="header-sub">by AI</span></h1>
+</div>
+
+<!-- Date selection screen -->
+<div id="dateScreen" class="date-screen screen">
+  <div id="recommendSection" class="recommend-section"></div>
+  <div id="yesterdaySection"></div>
+  <div class="date-nav">
+    <button class="date-btn primary" id="todayBtn">今日</button>
+    <button class="date-btn secondary" id="tomorrowBtn">明日</button>
+  </div>
+  <div class="date-picker">
+    <label for="dateInput">日付指定</label>
+    <input type="date" id="dateInput" class="date-input">
+    <button class="date-go-btn" id="dateGoBtn">表示</button>
+  </div>
+  <div id="latestInfo" class="recent-section"></div>
+</div>
+
+<!-- Venue selection -->
+<div id="venueScreen" class="venue-screen hidden"></div>
+
+<!-- Race list for a venue -->
+<div id="racelistScreen" class="racelist-screen hidden"></div>
+
+<!-- Race detail -->
+<div id="detailScreen" class="detail-screen hidden"></div>
+
+<button class="scroll-top" id="scrollTopBtn" aria-label="トップへ戻る">&#8593;</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function() {
+  "use strict";
+
+  const SUPABASE_URL = "YOUR_SUPABASE_URL";
+  const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const $ = function(s) { return document.querySelector(s); };
+  const S = { screen: "date", date: null, venue: null, raceId: null };
+
+  // Confidence thresholds for keiba
+  var CONF_HIGH = 2.0;
+  var CONF_MID = 0.8;
+
+  function showScreen(name) {
+    S.screen = name;
+    $("#dateScreen").classList.toggle("hidden", name !== "date");
+    $("#venueScreen").classList.toggle("hidden", name !== "venue");
+    $("#racelistScreen").classList.toggle("hidden", name !== "racelist");
+    $("#detailScreen").classList.toggle("hidden", name !== "detail");
+    $("#backBtn").classList.toggle("hidden", name === "date");
+    if (name === "date") $("#headerTitle").innerHTML = '競馬AI予想<span class="header-sub">by AI</span>';
+    window.scrollTo(0, 0);
+  }
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function tomorrowStr() {
+    var d = new Date(); d.setDate(d.getDate()+1);
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function formatDate(s) {
+    var d = new Date(s + "T00:00:00");
+    var dow = ["日","月","火","水","木","金","土"][d.getDay()];
+    return (d.getMonth()+1) + "/" + d.getDate() + "(" + dow + ")";
+  }
+
+  // Grade badge mapping for keiba
+  var GRADE_MAP = {
+    "G1": { cls: "grade-G1", label: "G1" },
+    "G2": { cls: "grade-G2", label: "G2" },
+    "G3": { cls: "grade-G3", label: "G3" },
+    "OP": { cls: "grade-OP", label: "OP" },
+    "open": { cls: "grade-open", label: "OP" },
+    "L": { cls: "grade-L", label: "L" },
+    "3勝": { cls: "grade-3win", label: "3勝" },
+    "2勝": { cls: "grade-2win", label: "2勝" },
+    "1勝": { cls: "grade-1win", label: "1勝" },
+    "新馬": { cls: "grade-newbie", label: "新馬" },
+    "未勝利": { cls: "grade-maiden", label: "未勝利" }
+  };
+
+  function gradeBadge(g) {
+    if (!g) return "";
+    var info = GRADE_MAP[g];
+    if (info) return '<span class="grade ' + info.cls + '">' + info.label + '</span>';
+    return '<span class="grade" style="background:#6b7280">' + g + '</span>';
+  }
+
+  // Bracket number to waku color class (1-8)
+  function wakuClass(bracketNum) {
+    var n = parseInt(bracketNum) || 0;
+    if (n >= 1 && n <= 8) return "waku-" + n;
+    return "";
+  }
+
+  function horseCircle(horseNum, bracketNum) {
+    var cls = wakuClass(bracketNum);
+    return '<span class="horse-circle ' + cls + '">' + horseNum + '</span>';
+  }
+
+  function frameCircle(bracketNum) {
+    var n = parseInt(bracketNum) || 0;
+    var cls = (n >= 1 && n <= 8) ? "frame-" + n : "";
+    return '<span class="frame ' + cls + '">' + bracketNum + '</span>';
+  }
+
+  function markClass(m) {
+    if (m === "\u25ce") return "mark-honmei";
+    if (m === "\u25cb") return "mark-taikou";
+    if (m === "\u25b2") return "mark-tanana";
+    if (m === "\u25b3") return "mark-renka";
+    return "";
+  }
+
+  function surfaceTag(surface, distance) {
+    var s = (surface || "").trim();
+    var d = distance ? distance + "m" : "";
+    var cls = "surface-turf";
+    var label = s;
+    if (s === "ダート" || s === "ダ" || s.toLowerCase() === "dirt") cls = "surface-dirt";
+    else if (s === "障害" || s === "障" || s.toLowerCase() === "obstacle") cls = "surface-obs";
+    if (!s && !d) return "";
+    return '<span class="rec-surface-tag ' + cls + '">' + s + d + '</span>';
+  }
+
+  function surfaceTagSmall(surface, distance) {
+    var s = (surface || "").trim();
+    var d = distance ? distance + "m" : "";
+    var cls = "surface-turf";
+    if (s === "ダート" || s === "ダ" || s.toLowerCase() === "dirt") cls = "surface-dirt";
+    else if (s === "障害" || s === "障" || s.toLowerCase() === "obstacle") cls = "surface-obs";
+    if (!s && !d) return "";
+    return '<span class="race-surface-tag ' + cls + '">' + s + d + '</span>';
+  }
+
+  function nowHHMM() {
+    var d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  function isToday(dateStr) {
+    return dateStr === todayStr();
+  }
+
+  // Race status: "upcoming" / "live" / "finished"
+  // Keiba races last ~3-4 minutes but post time includes parade etc (~15 min window)
+  function raceStatus(startTime, dateStr) {
+    if (!startTime || !isToday(dateStr)) return null;
+    var now = nowHHMM();
+    var parts = startTime.split(":").map(Number);
+    var sh = parts[0], sm = parts[1];
+    var startMin = sh * 60 + sm;
+    var nowParts = now.split(":").map(Number);
+    var nowMin = nowParts[0] * 60 + nowParts[1];
+    if (nowMin < startMin) return "upcoming";
+    if (nowMin < startMin + 15) return "live";
+    return "finished";
+  }
+
+  function statusBadge(status) {
+    if (status === "live") return '<span class="race-status status-live">LIVE</span>';
+    if (status === "finished") return '<span class="race-status status-finished">終了</span>';
+    if (status === "upcoming") return '<span class="race-status status-upcoming">発走前</span>';
+    return "";
+  }
+
+  function loadingHTML() {
+    return '<div class="loading"><div class="spinner"></div><br>読み込み中...</div>';
+  }
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  /* == Recommended races == */
+  async function loadRecommendations() {
+    var el = $("#recommendSection");
+    var today = todayStr();
+    try {
+      // Fetch predictions with entries and race info for today
+      var { data: races, error: e1 } = await sb
+        .from("races")
+        .select("race_id, date, venue, race_number, race_name, grade, distance, surface, horse_count")
+        .eq("date", today)
+        .order("race_id");
+      if (e1) throw e1;
+      if (!races || races.length === 0) { el.innerHTML = ""; return; }
+
+      var raceIds = races.map(function(r) { return r.race_id; });
+      var raceMap = {};
+      for (var r of races) raceMap[r.race_id] = r;
+
+      var { data: preds, error: e2 } = await sb
+        .from("predictions")
+        .select("race_id, horse_id, predicted_score, predicted_rank, mark, confidence")
+        .in("race_id", raceIds)
+        .order("predicted_rank");
+      if (e2) throw e2;
+      if (!preds || preds.length === 0) { el.innerHTML = ""; return; }
+
+      // Get horse IDs for entries
+      var horseIds = [...new Set(preds.map(function(p) { return p.horse_id; }))];
+      var { data: entries } = await sb
+        .from("entries")
+        .select("race_id, horse_id, bracket_number, horse_number, horse_name, jockey")
+        .in("race_id", raceIds);
+      var entryMap = {};
+      if (entries) {
+        for (var ent of entries) {
+          entryMap[ent.race_id + "_" + ent.horse_id] = ent;
+        }
+      }
+
+      // Check results
+      var { data: results } = await sb
+        .from("race_results")
+        .select("race_id, horse_id, finish_position")
+        .in("race_id", raceIds);
+      var resultMap = {};
+      if (results) {
+        for (var res of results) {
+          if (!resultMap[res.race_id]) resultMap[res.race_id] = {};
+          resultMap[res.race_id][res.horse_id] = res.finish_position;
+        }
+      }
+
+      var groups = {};
+      for (var p of preds) {
+        if (!groups[p.race_id]) groups[p.race_id] = [];
+        groups[p.race_id].push(p);
+      }
+
+      var recs = [];
+      for (var raceId of Object.keys(groups)) {
+        var rows = groups[raceId];
+        if (rows.length < 3) continue;
+        // Skip if results exist
+        if (resultMap[raceId] && Object.keys(resultMap[raceId]).length > 0) continue;
+
+        var sorted = rows.slice().sort(function(a, b) { return a.predicted_rank - b.predicted_rank; });
+        var conf = sorted[0].predicted_score - sorted[2].predicted_score;
+        if (conf >= CONF_HIGH) {
+          var race = raceMap[raceId];
+          if (!race) continue;
+          var top3 = sorted.slice(0, 3).map(function(s) {
+            var ent = entryMap[raceId + "_" + s.horse_id] || {};
+            return { horse_id: s.horse_id, horse_name: ent.horse_name || "", horse_number: ent.horse_number || "?", bracket_number: ent.bracket_number || 0, jockey: ent.jockey || "" };
+          });
+          var top4 = sorted[3] ? (function() {
+            var ent = entryMap[raceId + "_" + sorted[3].horse_id] || {};
+            return { horse_name: ent.horse_name || "", horse_number: ent.horse_number || "?", bracket_number: ent.bracket_number || 0 };
+          })() : null;
+
+          recs.push({
+            id: raceId,
+            venue: race.venue,
+            rn: race.race_number,
+            g: race.grade,
+            surface: race.surface,
+            distance: race.distance,
+            conf: conf,
+            top3: top3,
+            top4: top4
+          });
+        }
+      }
+
+      if (recs.length === 0) { el.innerHTML = ""; return; }
+      recs.sort(function(a, b) { return b.conf - a.conf; });
+
+      var h = '<div class="section-header">';
+      h += '<div class="section-icon">&#9733;</div>';
+      h += '<span class="section-title">今日のおすすめ</span>';
+      h += '<span class="section-badge">' + recs.length + '件</span>';
+      h += '</div>';
+
+      for (var i = 0; i < recs.length; i++) {
+        var rec = recs[i];
+        var confCls = rec.conf >= 3.5 ? "conf-very-high" : "conf-high";
+        h += '<div class="rec-card" data-raceid="' + rec.id + '">';
+        h += '<div class="rec-top">';
+        h += '<span class="rec-venue">' + escapeHtml(rec.venue) + ' ' + rec.rn + 'R ' + gradeBadge(rec.g) + '</span>';
+        h += '<span class="rec-conf ' + confCls + '">' + rec.conf.toFixed(2) + '</span>';
+        h += '</div>';
+        h += '<div class="rec-meta-row">' + surfaceTag(rec.surface, rec.distance) + '</div>';
+        h += '<div class="rec-horses">';
+        h += '<div class="rec-horse-group"><span class="rec-horse-label">TOP3</span>';
+        for (var t = 0; t < rec.top3.length; t++) {
+          h += horseCircle(rec.top3[t].horse_number, rec.top3[t].bracket_number);
+        }
+        h += '</div>';
+        if (rec.top4) {
+          h += '<span class="rec-plus">+</span>';
+          h += '<div class="rec-horse-group"><span class="rec-horse-label">4th</span>';
+          h += horseCircle(rec.top4.horse_number, rec.top4.bracket_number);
+          h += '</div>';
+        }
+        h += '</div>';
+        h += '<div class="rec-names">';
+        h += rec.top3.map(function(p) { return escapeHtml((p.horse_name || "").slice(0, 4)); }).join(" / ");
+        if (rec.top4) h += ' / ' + escapeHtml((rec.top4.horse_name || "").slice(0, 4));
+        h += '</div>';
+        h += '<span class="rec-arrow">&#8250;</span>';
+        h += '</div>';
+      }
+      el.innerHTML = h;
+      el.querySelectorAll(".rec-card").forEach(function(c) {
+        c.addEventListener("click", function() { loadRaceDetail(c.dataset.raceid); });
+      });
+    } catch (e) { el.innerHTML = ""; console.error("loadRecommendations error:", e); }
+  }
+
+  // Confidence calculation (1st vs 3rd score gap)
+  function calcRaceConf(predsByRace) {
+    var conf = {};
+    for (var rid of Object.keys(predsByRace)) {
+      var rows = predsByRace[rid];
+      if (rows.length < 3) continue;
+      rows.sort(function(a, b) { return a.predicted_rank - b.predicted_rank; });
+      conf[rid] = rows[0].predicted_score - rows[2].predicted_score;
+    }
+    return conf;
+  }
+
+  function confBadge(conf) {
+    if (conf == null) return "";
+    var cls;
+    if (conf >= CONF_HIGH) cls = "race-conf-high";
+    else if (conf >= CONF_MID) cls = "race-conf-mid";
+    else cls = "race-conf-low";
+    return '<span class="race-conf ' + cls + '">信頼度 ' + conf.toFixed(1) + '</span>';
+  }
+
+  // Cache: date-level race/prediction data
+  var cachedDate = null, cachedRaces = null, cachedRaceConf = null, cachedPredSet = null;
+
+  async function fetchDateData(dateStr) {
+    if (cachedDate === dateStr && cachedRaces) return;
+    var { data: races, error } = await sb
+      .from("races")
+      .select("race_id, venue, race_number, race_name, grade, distance, surface, horse_count")
+      .eq("date", dateStr)
+      .order("race_id");
+    if (error) throw error;
+    cachedRaces = races || [];
+    cachedDate = dateStr;
+    if (cachedRaces.length === 0) { cachedRaceConf = {}; cachedPredSet = new Set(); return; }
+    var raceIds = cachedRaces.map(function(r) { return r.race_id; });
+    var { data: preds } = await sb.from("predictions").select("race_id, predicted_score, predicted_rank").in("race_id", raceIds).order("predicted_rank");
+    cachedPredSet = new Set((preds || []).map(function(p) { return p.race_id; }));
+    var byRace = {};
+    for (var p of (preds || [])) { if (!byRace[p.race_id]) byRace[p.race_id] = []; byRace[p.race_id].push(p); }
+    cachedRaceConf = calcRaceConf(byRace);
+  }
+
+  /* == Venue selection screen == */
+  async function loadVenueList(dateStr) {
+    S.date = dateStr;
+    showScreen("venue");
+    $("#headerTitle").textContent = formatDate(dateStr);
+    var el = $("#venueScreen");
+    el.innerHTML = loadingHTML();
+    try {
+      await fetchDateData(dateStr);
+      if (cachedRaces.length === 0) {
+        el.innerHTML = '<div class="empty-msg"><div class="empty-icon">&#128197;</div>この日のレースデータがありません</div>';
+        return;
+      }
+
+      var groups = {};
+      for (var r of cachedRaces) { var k = r.venue || "不明"; if (!groups[k]) groups[k] = []; groups[k].push(r); }
+
+      var venueEntries = Object.entries(groups);
+
+      var h = '<div class="venue-screen-date">' + formatDate(dateStr) + ' の開催場</div>';
+      for (var vi = 0; vi < venueEntries.length; vi++) {
+        var venue = venueEntries[vi][0];
+        var vr = venueEntries[vi][1];
+
+        // Confidence summary per venue
+        var confs = vr.map(function(r) { return cachedRaceConf[r.race_id]; }).filter(function(c) { return c != null; });
+        var highCount = confs.filter(function(c) { return c >= CONF_HIGH; }).length;
+        var midCount = confs.filter(function(c) { return c >= CONF_MID && c < CONF_HIGH; }).length;
+        var hasRec = highCount > 0;
+
+        // Surface summary
+        var surfaces = {};
+        for (var r of vr) { var sk = (r.surface || "") + (r.distance ? r.distance + "m" : ""); if (sk) surfaces[r.surface || ""] = true; }
+
+        h += '<div class="venue-card' + (hasRec ? ' has-rec' : '') + '" data-venue="' + escapeHtml(venue) + '">';
+        h += '<span class="venue-name">' + escapeHtml(venue) + '</span>';
+        h += '<div class="venue-info">';
+        h += '<span class="venue-race-count">' + vr.length + 'レース</span>';
+        if (confs.length > 0) {
+          h += '<div class="venue-conf-summary">';
+          if (highCount > 0) h += '<span class="venue-conf-tag venue-conf-high">高信頼 ' + highCount + 'R</span>';
+          if (midCount > 0) h += '<span class="venue-conf-tag venue-conf-mid">中信頼 ' + midCount + 'R</span>';
+          h += '</div>';
+        }
+        h += '</div>';
+        h += '<span class="venue-chevron">&#8250;</span>';
+        h += '</div>';
+      }
+      el.innerHTML = h;
+      el.querySelectorAll(".venue-card").forEach(function(c) {
+        c.addEventListener("click", function() { loadRaceList(dateStr, c.dataset.venue); });
+      });
+    } catch (err) {
+      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + escapeHtml(err.message) + '</div>';
+    }
+  }
+
+  /* == Race list (one venue) == */
+  async function loadRaceList(dateStr, venue) {
+    S.date = dateStr;
+    S.venue = venue;
+    showScreen("racelist");
+    $("#headerTitle").textContent = venue + ' ' + formatDate(dateStr);
+    var el = $("#racelistScreen");
+    el.innerHTML = loadingHTML();
+    try {
+      await fetchDateData(dateStr);
+      var venueRaces = cachedRaces.filter(function(r) { return r.venue === venue; });
+      if (venueRaces.length === 0) {
+        el.innerHTML = '<div class="empty-msg"><div class="empty-icon">&#128197;</div>この場のレースデータがありません</div>';
+        return;
+      }
+
+      var h = '<div class="racelist-header">';
+      h += '<span class="racelist-venue-name">' + escapeHtml(venue) + '</span>';
+      h += '<span class="racelist-date-label">' + formatDate(dateStr) + ' / ' + venueRaces.length + 'R</span>';
+      h += '</div>';
+
+      for (var i = 0; i < venueRaces.length; i++) {
+        var r = venueRaces[i];
+        var has = cachedPredSet.has(r.race_id);
+        var title = r.race_name || (r.race_number + "R");
+        var conf = cachedRaceConf[r.race_id];
+        h += '<div class="race-card" data-raceid="' + r.race_id + '">';
+        h += '<span class="race-num">' + r.race_number + 'R</span>';
+        h += '<span class="race-name">' + escapeHtml(title) + '</span>';
+        h += '<div class="race-meta">';
+        h += surfaceTagSmall(r.surface, r.distance);
+        h += gradeBadge(r.grade);
+        if (has && conf != null) h += confBadge(conf);
+        if (!has) h += '<span class="no-pred">予測なし</span>';
+        h += '</div>';
+        h += '<span class="race-chevron">&#8250;</span>';
+        h += '</div>';
+      }
+      el.innerHTML = h;
+      el.querySelectorAll(".race-card").forEach(function(c) {
+        c.addEventListener("click", function() { loadRaceDetail(c.dataset.raceid); });
+      });
+    } catch (err) {
+      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + escapeHtml(err.message) + '</div>';
+    }
+  }
+
+  /* == Race detail == */
+  async function loadRaceDetail(raceId) {
+    S.raceId = raceId;
+    showScreen("detail");
+    var el = $("#detailScreen");
+    el.innerHTML = loadingHTML();
+    try {
+      // Fetch race info
+      var { data: raceInfo, error: e0 } = await sb.from("races").select("*").eq("race_id", raceId).single();
+      if (e0 && e0.code !== "PGRST116") throw e0;
+
+      // Fetch predictions
+      var { data: preds, error: e1 } = await sb.from("predictions").select("*").eq("race_id", raceId).order("predicted_rank");
+      if (e1) throw e1;
+
+      // Fetch entries
+      var { data: entries, error: e2 } = await sb.from("entries").select("*").eq("race_id", raceId);
+      if (e2) throw e2;
+
+      // Fetch results
+      var { data: results, error: e3 } = await sb.from("race_results").select("*").eq("race_id", raceId);
+      if (e3) throw e3;
+
+      // Build entry map by horse_id
+      var entryMap = {};
+      if (entries) {
+        for (var ent of entries) { entryMap[ent.horse_id] = ent; }
+      }
+
+      // Build result map by horse_id
+      var resultMap = {};
+      if (results) {
+        for (var res of results) { resultMap[res.horse_id] = res; }
+      }
+
+      if ((!preds || preds.length === 0) && (!entries || entries.length === 0)) {
+        var h = "";
+        if (raceInfo) {
+          h += '<div class="detail-header"><div class="detail-title">' + escapeHtml(raceInfo.race_name || raceInfo.race_number + "R") + ' ' + gradeBadge(raceInfo.grade) + '</div>';
+          h += '<div class="detail-meta"><span>' + formatDate(raceInfo.date) + '</span><span>' + escapeHtml(raceInfo.venue) + '</span></div></div>';
+        }
+        h += '<div class="empty-msg"><div class="empty-icon">&#128202;</div>このレースの予測データがありません</div>';
+        el.innerHTML = h;
+        return;
+      }
+
+      var race = raceInfo || {};
+      if (!S.venue) S.venue = race.venue;
+      if (!S.date) S.date = race.date;
+      $("#headerTitle").textContent = (race.venue || "") + " " + (race.race_number || "") + "R";
+
+      var h = '<div class="detail-header">';
+      h += '<div class="detail-title">' + escapeHtml(race.race_name || race.race_number + "R") + ' ' + gradeBadge(race.grade) + '</div>';
+      h += '<div class="detail-meta">';
+      if (race.date) h += '<span class="detail-meta-item">' + formatDate(race.date) + '</span>';
+      if (race.venue) h += '<span class="detail-meta-item">' + escapeHtml(race.venue) + '</span>';
+      if (race.surface || race.distance) {
+        var surfCls = "surface-turf";
+        var surfStr = race.surface || "";
+        if (surfStr === "ダート" || surfStr === "ダ") surfCls = "surface-dirt";
+        else if (surfStr === "障害" || surfStr === "障") surfCls = "surface-obs";
+        h += '<span class="detail-surface-badge ' + surfCls + '">' + escapeHtml(surfStr) + (race.distance ? race.distance + "m" : "") + '</span>';
+      }
+      if (race.direction) h += '<span class="detail-meta-item">' + escapeHtml(race.direction) + '</span>';
+      if (race.weather) h += '<span class="detail-condition">' + escapeHtml(race.weather) + '</span>';
+      if (race.track_condition) h += '<span class="detail-condition">' + escapeHtml(race.track_condition) + '</span>';
+      if (race.horse_count) h += '<span class="detail-meta-item">' + race.horse_count + '頭</span>';
+      h += '</div></div>';
+
+      // Build rows: merge predictions with entries and results
+      var rows = [];
+      if (preds && preds.length > 0) {
+        for (var p of preds) {
+          var ent = entryMap[p.horse_id] || {};
+          var res = resultMap[p.horse_id] || {};
+          rows.push({
+            predicted_rank: p.predicted_rank,
+            predicted_score: p.predicted_score,
+            mark: p.mark,
+            confidence: p.confidence,
+            horse_id: p.horse_id,
+            bracket_number: ent.bracket_number || null,
+            horse_number: ent.horse_number || null,
+            horse_name: ent.horse_name || "",
+            jockey: ent.jockey || "",
+            odds: ent.odds || null,
+            popularity: ent.popularity || null,
+            sex_age: ent.sex_age || "",
+            weight_carried: ent.weight_carried || null,
+            finish_position: res.finish_position || null
+          });
+        }
+      } else if (entries && entries.length > 0) {
+        // No predictions, show entries only
+        for (var ent of entries) {
+          var res = resultMap[ent.horse_id] || {};
+          rows.push({
+            predicted_rank: null,
+            predicted_score: null,
+            mark: null,
+            confidence: null,
+            horse_id: ent.horse_id,
+            bracket_number: ent.bracket_number,
+            horse_number: ent.horse_number,
+            horse_name: ent.horse_name || "",
+            jockey: ent.jockey || "",
+            odds: ent.odds || null,
+            popularity: ent.popularity || null,
+            sex_age: ent.sex_age || "",
+            weight_carried: ent.weight_carried || null,
+            finish_position: res.finish_position || null
+          });
+        }
+      }
+
+      var hasRes = rows.some(function(d) { return d.finish_position != null; });
+      var hasPred = rows.some(function(d) { return d.predicted_rank != null; });
+
+      h += '<div class="pred-table-wrapper">';
+      h += '<table class="pred-table"><thead><tr>';
+      if (hasPred) h += '<th>予</th><th>印</th>';
+      h += '<th>枠</th><th>番</th><th style="text-align:left">馬名</th><th style="text-align:left">騎手</th>';
+      h += '<th>オッズ</th>';
+      if (hasPred) h += '<th>スコア</th>';
+      if (hasRes) h += '<th>着</th>';
+      h += '</tr></thead><tbody>';
+
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var mc = markClass(row.mark);
+        var bn = row.bracket_number || "-";
+        var hn = row.horse_number || "-";
+        var isTop3 = hasPred && row.predicted_rank && row.predicted_rank <= 3;
+        h += '<tr' + (isTop3 ? ' class="top3-row"' : '') + '>';
+        if (hasPred) {
+          h += '<td>' + (row.predicted_rank || "-") + '</td>';
+          h += '<td><span class="mark ' + mc + '">' + (row.mark || "") + '</span></td>';
+        }
+        h += '<td>' + frameCircle(bn) + '</td>';
+        h += '<td>' + hn + '</td>';
+        h += '<td class="horse-name-cell">' + escapeHtml(row.horse_name || "-") + '</td>';
+        h += '<td class="jockey-cell">' + escapeHtml(row.jockey || "-") + '</td>';
+        h += '<td class="odds-cell">' + (row.odds != null ? row.odds.toFixed(1) : "-") + '</td>';
+        if (hasPred) {
+          h += '<td class="score-cell">' + (row.predicted_score != null ? row.predicted_score.toFixed(2) : "-") + '</td>';
+        }
+        if (hasRes) {
+          var fp = row.finish_position;
+          var rc = fp === 1 ? "result-1" : fp === 2 ? "result-2" : fp === 3 ? "result-3" : "";
+          h += '<td class="result-cell ' + rc + '">' + (fp != null ? fp : "-") + '</td>';
+        }
+        h += '</tr>';
+      }
+      h += '</tbody></table>';
+      h += '</div>';
+
+      if (!hasRes && hasPred && rows.length >= 3) h += buildBetSection(rows);
+      el.innerHTML = h;
+    } catch (err) {
+      el.innerHTML = '<div class="error-msg">読み込みエラー: ' + escapeHtml(err.message) + '</div>';
+    }
+  }
+
+  /* == Bet recommendations == */
+  function buildBetSection(data) {
+    var predRows = data.filter(function(d) { return d.predicted_score != null; });
+    if (predRows.length < 3) return "";
+
+    var scores = predRows.map(function(d) { return d.predicted_score || 0; });
+    var maxS = Math.max.apply(null, scores);
+    var exps = scores.map(function(s) { return Math.exp((s - maxS) * 3); });
+    var sumE = exps.reduce(function(a, b) { return a + b; }, 0);
+    var top = predRows.slice(0, 5).map(function(d, i) {
+      return {
+        rank: i+1, mark: d.mark || "", num: d.horse_number || "?",
+        name: (d.horse_name || "").slice(0, 4), score: d.predicted_score || 0
+      };
+    });
+
+    var gap12 = top[0].score - top[1].score;
+    var lvl, pct, fillCls, label;
+    if (gap12 > 0.25) { lvl = "high"; pct = 85; fillCls = "conf-fill-high"; label = "堅いレース"; }
+    else if (gap12 > 0.1) { lvl = "mid"; pct = 60; fillCls = "conf-fill-mid"; label = "普通"; }
+    else { lvl = "low"; pct = 35; fillCls = "conf-fill-low"; label = "混戦"; }
+
+    var h = '<div class="bet-section">';
+    h += '<div class="bet-header"><span class="bet-title">おすすめ買い目</span>';
+    h += '<span class="bet-conf-label" style="background:' + (lvl === "high" ? "#fef2f2;color:#dc2626" : lvl === "mid" ? "#fff7ed;color:#ea580c" : "#f1f5f9;color:#64748b") + '">' + label + '</span>';
+    h += '<div class="conf-bar"><div class="conf-fill ' + fillCls + '" style="width:' + pct + '%"></div></div>';
+    h += '</div>';
+
+    // Umatan (1st-2nd)
+    h += '<div class="bet-group-label">馬単（1着-2着）</div>';
+    var ex = [
+      { a: top[0], b: top[1], tag: "本命", cls: "tag-honmei" },
+      { a: top[0], b: top[2], tag: "対抗", cls: "tag-honmei" }
+    ];
+    if (lvl !== "high") {
+      ex.push({ a: top[1], b: top[0], tag: "中穴", cls: "tag-chuuana" });
+      if (top[2]) ex.push({ a: top[1], b: top[2], tag: "中穴", cls: "tag-chuuana" });
+    }
+    for (var i = 0; i < ex.length; i++) {
+      var e = ex[i];
+      h += '<div class="bet-row"><span class="bet-combo">' + e.a.num + ' → ' + e.b.num + '</span>';
+      h += '<span class="bet-names">' + escapeHtml(e.a.name) + '→' + escapeHtml(e.b.name) + '</span>';
+      h += '<span class="bet-tag ' + e.cls + '">' + e.tag + '</span></div>';
+    }
+
+    // Sanrentan (1st-2nd-3rd)
+    if (top.length >= 3) {
+      h += '<div class="bet-group-label">三連単（1着-2着-3着）</div>';
+      var tr = [
+        { a: top[0], b: top[1], c: top[2], tag: "本命", cls: "tag-honmei" },
+        { a: top[0], b: top[2], c: top[1], tag: "対抗", cls: "tag-honmei" }
+      ];
+      if (lvl !== "high" && top[3]) {
+        tr.push({ a: top[0], b: top[1], c: top[3], tag: "中穴", cls: "tag-chuuana" });
+        tr.push({ a: top[1], b: top[0], c: top[2], tag: "中穴", cls: "tag-chuuana" });
+      }
+      if (lvl === "low" && top[3]) tr.push({ a: top[0], b: top[2], c: top[3], tag: "大穴", cls: "tag-ouana" });
+      for (var i = 0; i < tr.length; i++) {
+        var t = tr[i];
+        h += '<div class="bet-row"><span class="bet-combo">' + t.a.num + ' → ' + t.b.num + ' → ' + t.c.num + '</span>';
+        h += '<span class="bet-names">' + escapeHtml(t.a.name) + '→' + escapeHtml(t.b.name) + '→' + escapeHtml(t.c.name) + '</span>';
+        h += '<span class="bet-tag ' + t.cls + '">' + t.tag + '</span></div>';
+      }
+    }
+
+    // Wide (top3 pairs)
+    h += '<div class="bet-group-label">ワイド（3着以内の2頭）</div>';
+    var wd = [
+      { a: top[0], b: top[1], tag: "本命", cls: "tag-honmei" },
+      { a: top[0], b: top[2], tag: "本命", cls: "tag-honmei" },
+      { a: top[1], b: top[2], tag: "対抗", cls: "tag-honmei" }
+    ];
+    if (top[3]) wd.push({ a: top[0], b: top[3], tag: "中穴", cls: "tag-chuuana" });
+    for (var i = 0; i < wd.length; i++) {
+      var w = wd[i];
+      var lo = Math.min(parseInt(w.a.num) || 0, parseInt(w.b.num) || 0);
+      var hi = Math.max(parseInt(w.a.num) || 0, parseInt(w.b.num) || 0);
+      h += '<div class="bet-row"><span class="bet-combo">' + lo + ' = ' + hi + '</span>';
+      h += '<span class="bet-names">' + escapeHtml(w.a.name) + '-' + escapeHtml(w.b.name) + '</span>';
+      h += '<span class="bet-tag ' + w.cls + '">' + w.tag + '</span></div>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  /* == Yesterday results == */
+  async function loadYesterdayResults() {
+    var el = $("#yesterdaySection");
+    try {
+      var today = todayStr();
+      // Find the most recent date with results before today
+      var { data: recentRaces, error: e1 } = await sb
+        .from("race_results")
+        .select("race_id")
+        .limit(1);
+      if (e1 || !recentRaces || recentRaces.length === 0) { el.innerHTML = ""; return; }
+
+      // Get races with results, find dates
+      var { data: racesDates, error: e2 } = await sb
+        .from("races")
+        .select("race_id, date")
+        .lt("date", today)
+        .order("date", { ascending: false })
+        .limit(200);
+      if (e2 || !racesDates || racesDates.length === 0) { el.innerHTML = ""; return; }
+
+      // Find latest date that has results
+      var dateSet = [...new Set(racesDates.map(function(r) { return r.date; }))];
+      var targetDate = null;
+      for (var di = 0; di < dateSet.length && di < 5; di++) {
+        var dRaces = racesDates.filter(function(r) { return r.date === dateSet[di]; });
+        var dRaceIds = dRaces.map(function(r) { return r.race_id; });
+        var { data: resCheck } = await sb
+          .from("race_results")
+          .select("race_id")
+          .in("race_id", dRaceIds)
+          .limit(1);
+        if (resCheck && resCheck.length > 0) { targetDate = dateSet[di]; break; }
+      }
+      if (!targetDate) { el.innerHTML = ""; return; }
+
+      // Fetch all data for that date
+      var { data: tRaces } = await sb.from("races").select("race_id, venue, race_number, grade, distance, surface").eq("date", targetDate).order("race_id");
+      if (!tRaces || tRaces.length === 0) { el.innerHTML = ""; return; }
+      var tRaceIds = tRaces.map(function(r) { return r.race_id; });
+      var tRaceMap = {};
+      for (var r of tRaces) tRaceMap[r.race_id] = r;
+
+      var { data: tPreds } = await sb.from("predictions").select("race_id, horse_id, predicted_score, predicted_rank, mark").in("race_id", tRaceIds).order("predicted_rank");
+      var { data: tEntries } = await sb.from("entries").select("race_id, horse_id, horse_number, bracket_number, horse_name").in("race_id", tRaceIds);
+      var { data: tResults } = await sb.from("race_results").select("race_id, horse_id, finish_position, horse_number").in("race_id", tRaceIds);
+
+      if (!tPreds || tPreds.length === 0) { el.innerHTML = ""; return; }
+
+      var entryMap = {};
+      if (tEntries) { for (var ent of tEntries) entryMap[ent.race_id + "_" + ent.horse_id] = ent; }
+      var resMap = {};
+      if (tResults) { for (var res of tResults) { if (!resMap[res.race_id]) resMap[res.race_id] = {}; resMap[res.race_id][res.horse_id] = res; } }
+
+      // Group predictions by race
+      var predGroups = {};
+      for (var p of tPreds) { if (!predGroups[p.race_id]) predGroups[p.race_id] = []; predGroups[p.race_id].push(p); }
+
+      var totalRaces = 0, top1Hits = 0, top3Overlap = 0, top3Total = 0;
+      var raceCards = [];
+
+      for (var raceId of Object.keys(predGroups).sort()) {
+        var rows = predGroups[raceId];
+        var raceResults = resMap[raceId];
+        if (!raceResults || Object.keys(raceResults).length === 0) continue;
+
+        totalRaces++;
+        var sorted = rows.slice().sort(function(a, b) { return a.predicted_rank - b.predicted_rank; });
+        var predTop3 = sorted.slice(0, 3);
+
+        var actualTop3Set = new Set();
+        for (var hid of Object.keys(raceResults)) {
+          if (raceResults[hid].finish_position != null && raceResults[hid].finish_position <= 3) {
+            actualTop3Set.add(hid);
+          }
+        }
+
+        // Check if top-1 prediction won
+        var top1Row = predTop3[0];
+        var top1Result = raceResults[top1Row.horse_id];
+        var isTop1Hit = top1Result && top1Result.finish_position === 1;
+        if (isTop1Hit) top1Hits++;
+
+        // Top3 overlap
+        var overlap = 0;
+        for (var pt of predTop3) {
+          var ptRes = raceResults[pt.horse_id];
+          if (ptRes && ptRes.finish_position != null && ptRes.finish_position <= 3) overlap++;
+        }
+        top3Overlap += overlap;
+        top3Total += Math.min(3, actualTop3Set.size);
+
+        var conf = sorted.length >= 3 ? sorted[0].predicted_score - sorted[2].predicted_score : 0;
+        var isHighConf = conf >= CONF_HIGH;
+        var raceInfo = tRaceMap[raceId] || {};
+
+        var predTop3WithInfo = predTop3.map(function(pt) {
+          var ent = entryMap[raceId + "_" + pt.horse_id] || {};
+          var res = raceResults[pt.horse_id] || {};
+          return {
+            mark: pt.mark,
+            horse_number: ent.horse_number || res.horse_number || "?",
+            bracket_number: ent.bracket_number || 0,
+            horse_name: ent.horse_name || "",
+            finish_position: res.finish_position
+          };
+        });
+
+        raceCards.push({
+          raceId: raceId,
+          venue: raceInfo.venue || "",
+          raceNumber: raceInfo.race_number || "",
+          grade: raceInfo.grade,
+          conf: conf,
+          isHighConf: isHighConf,
+          isTop1Hit: isTop1Hit,
+          overlap: overlap,
+          predTop3: predTop3WithInfo
+        });
+      }
+
+      if (totalRaces === 0) { el.innerHTML = ""; return; }
+
+      var top1Pct = (top1Hits / totalRaces * 100).toFixed(1);
+      var top3Pct = top3Total > 0 ? (top3Overlap / top3Total * 100).toFixed(1) : "0.0";
+
+      var h = '<div class="yday-section">';
+      h += '<div class="section-header">';
+      h += '<div class="section-icon" style="background:linear-gradient(135deg,#16a34a,#22c55e)">&#128202;</div>';
+      h += '<span class="section-title">前日の結果</span>';
+      h += '<span class="section-badge">' + formatDate(targetDate) + '</span>';
+      h += '</div>';
+
+      // Summary stats
+      h += '<div class="yday-summary">';
+      h += '<div class="yday-stat"><span class="yday-stat-value">' + top1Pct + '%</span><span class="yday-stat-label">&#9678;的中率</span><span class="yday-stat-sub">' + top1Hits + '/' + totalRaces + '</span></div>';
+      h += '<div class="yday-stat"><span class="yday-stat-value">' + top3Pct + '%</span><span class="yday-stat-label">Top3一致</span><span class="yday-stat-sub">' + top3Overlap + '/' + top3Total + '</span></div>';
+      h += '<div class="yday-stat"><span class="yday-stat-value">' + totalRaces + '</span><span class="yday-stat-label">レース</span></div>';
+      h += '</div>';
+
+      // Sort by confidence descending, show top 10
+      raceCards.sort(function(a, b) { return b.conf - a.conf; });
+      var showCards = raceCards.slice(0, 10);
+
+      for (var i = 0; i < showCards.length; i++) {
+        var rc = showCards[i];
+        var cardCls = "yday-card";
+        if (rc.isHighConf && rc.isTop1Hit) cardCls += " yday-high-hit";
+        else if (rc.isHighConf && !rc.isTop1Hit) cardCls += " yday-high-miss";
+
+        h += '<div class="' + cardCls + '" data-raceid="' + rc.raceId + '">';
+        h += '<div class="yday-card-top">';
+        h += '<span class="yday-venue">' + escapeHtml(rc.venue) + ' ' + rc.raceNumber + 'R</span>';
+        h += gradeBadge(rc.grade);
+        h += confBadge(rc.conf);
+        if (rc.isTop1Hit) h += '<span class="yday-hit">&#9678;的中</span>';
+        else h += '<span class="yday-miss">&#9678;ハズレ</span>';
+        h += '</div>';
+
+        // Predicted top3 with actual results
+        h += '<div class="yday-comparison">';
+        for (var pt of rc.predTop3) {
+          var mc = markClass(pt.mark);
+          var inT3 = pt.finish_position != null && pt.finish_position <= 3;
+          h += '<span class="yday-horse ' + (inT3 ? 'yday-in-top3' : 'yday-out-top3') + '">';
+          h += '<span class="mark ' + mc + '" style="font-size:13px">' + (pt.mark || "") + '</span>';
+          h += horseCircle(pt.horse_number, pt.bracket_number);
+          h += '<span class="yday-arrow">&#8594;</span>';
+          h += '<span class="yday-finish">' + (pt.finish_position != null ? pt.finish_position + '着' : '-') + '</span>';
+          h += '</span>';
+        }
+        h += '</div>';
+
+        h += '<div class="yday-bottom">';
+        h += '<span class="yday-top3-label">Top3: ' + rc.overlap + '/3</span>';
+        for (var d = 0; d < 3; d++) {
+          h += '<span class="yday-dot ' + (d < rc.overlap ? 'yday-dot-hit' : 'yday-dot-miss') + '"></span>';
+        }
+        h += '</div>';
+        h += '</div>';
+      }
+      h += '</div>';
+
+      el.innerHTML = h;
+      el.querySelectorAll(".yday-card").forEach(function(c) {
+        c.addEventListener("click", function() { loadRaceDetail(c.dataset.raceid); });
+      });
+    } catch (e) { el.innerHTML = ""; console.error("loadYesterdayResults error:", e); }
+  }
+
+  /* == Event handlers == */
+  $("#todayBtn").addEventListener("click", function() { loadVenueList(todayStr()); });
+  $("#tomorrowBtn").addEventListener("click", function() { loadVenueList(tomorrowStr()); });
+  $("#dateGoBtn").addEventListener("click", function() { var v = $("#dateInput").value; if (v) loadVenueList(v); });
+  $("#dateInput").addEventListener("keydown", function(e) { if (e.key === "Enter") { var v = $("#dateInput").value; if (v) loadVenueList(v); } });
+  $("#backBtn").addEventListener("click", function() {
+    if (S.screen === "detail") loadRaceList(S.date, S.venue);
+    else if (S.screen === "racelist") loadVenueList(S.date);
+    else if (S.screen === "venue") showScreen("date");
+  });
+
+  // Scroll to top button
+  var scrollBtn = $("#scrollTopBtn");
+  window.addEventListener("scroll", function() {
+    scrollBtn.classList.toggle("visible", window.scrollY > 200);
+  });
+  scrollBtn.addEventListener("click", function() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  $("#dateInput").value = todayStr();
+  loadRecommendations();
+  loadYesterdayResults();
+
+  (async function loadLatestDates() {
+    var el = $("#latestInfo");
+    try {
+      var { data: dates, error } = await sb.from("races").select("date").order("date", { ascending: false }).limit(100);
+      if (error) throw error;
+      if (!dates || dates.length === 0) { el.innerHTML = '<div class="recent-label">データなし</div>'; return; }
+      var unique = [...new Set(dates.map(function(d) { return d.date; }))].slice(0, 7);
+      var h = '<div class="recent-label">直近の開催</div>';
+      for (var d of unique) {
+        h += '<button class="recent-btn" data-date="' + d + '">';
+        h += '<span class="date-main">' + formatDate(d) + '</span>';
+        h += '<span class="date-iso">' + d + '</span>';
+        h += '<span class="arrow">&#8250;</span>';
+        h += '</button>';
+      }
+      el.innerHTML = h;
+      el.querySelectorAll(".recent-btn").forEach(function(b) {
+        b.addEventListener("click", function() { loadVenueList(b.dataset.date); });
+      });
+    } catch (e) { el.innerHTML = ""; }
+  })();
+})();
+</script>
+</body>
+</html>

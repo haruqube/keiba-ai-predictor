@@ -90,6 +90,13 @@ def predict_weekend():
                 marks = ["◎", "○", "▲", "△", "△"]
                 df["mark"] = [marks[i] if i < len(marks) else "" for i in range(len(df))]
 
+                # 信頼度スコア: 1位と3位のスコア差（conf_gap13）
+                if len(df) >= 3:
+                    scores_sorted = df["predicted_score"].values  # already sorted desc
+                    confidence = float(scores_sorted[0] - scores_sorted[2])
+                else:
+                    confidence = 0.0
+
                 # 予測をDBに保存
                 for _, row in df.iterrows():
                     insert_prediction(conn, {
@@ -98,14 +105,21 @@ def predict_weekend():
                         "predicted_score": row["predicted_score"],
                         "predicted_rank": row["predicted_rank"],
                         "mark": row["mark"],
-                        "confidence": row["predicted_score"],
+                        "confidence": confidence,
                     })
 
                 conn.commit()
 
                 # 表示
                 race_name = entry_data.get("race_name", race_id)
-                table = Table(title=f"{race_name}")
+                # 信頼度ティア
+                if confidence >= 2.0:
+                    conf_label = "[bold green]HIGH[/bold green]"
+                elif confidence >= 0.8:
+                    conf_label = "[yellow]MID[/yellow]"
+                else:
+                    conf_label = "[dim]LOW[/dim]"
+                table = Table(title=f"{race_name} (confidence: {confidence:.2f} {conf_label})")
                 table.add_column("印")
                 table.add_column("馬番")
                 table.add_column("馬名")
